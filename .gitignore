@@ -35,8 +35,9 @@ __pycache__/
 .python-version
 
 # Vector DB
-backend/data/*
-!backend/data/.gitkeep
+data/chromaDB/
+data/uploads/*
+data/uploads/.gitkeep
 
 #
 frontend/
