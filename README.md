@@ -1,125 +1,308 @@
-# Transcript Summarizer
+<p align="center">
+  <h1 align="center">🧠 RAG Learning Assistant</h1>
+  <p align="center">
+    <strong>Production-grade RAG pipeline that turns documents into citation-grounded question-answering systems.</strong>
+  </p>
+  <p align="center">
+    <a href="#features"><img src="https://img.shields.io/badge/Features-9-blue?style=flat-square" alt="Features"></a>
+    <img src="https://img.shields.io/badge/python-3.13%2B-blue?style=flat-square&logo=python&logoColor=white" alt="Python">
+    <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License">
+    <img src="https://img.shields.io/badge/Vector%20DB-ChromaDB-orange?style=flat-square" alt="ChromaDB">
+    <img src="https://img.shields.io/badge/Retrieval-Hybrid%20BM25%20%2B%20Vector-purple?style=flat-square" alt="Hybrid Retrieval">
+    <img src="https://img.shields.io/badge/Reranking-Cross%20Encoder-red?style=flat-square" alt="Reranking">
+  </p>
+</p>
 
-A full-stack web app that turns long transcript text into a concise AI-generated summary and a set of study flashcards.
+---
 
-The project combines a FastAPI backend with a React + Vite frontend. The backend sends transcript text to Google Gemini through LangChain, asks for a structured response, and returns both a summary and flashcards that the frontend renders interactively.
+## 📌 Overview
 
-## Features
+**RAG Learning Assistant** is a production-style Retrieval-Augmented Generation system that allows users to upload documents and ask natural language questions with citation-backed answers.
 
-- AI-powered transcript summarization.
-- Automatic generation of 7 to 8 flashcards from the source transcript.
-- Structured API response with predictable `summary` and `flashcards` fields.
-- Modern React UI for reviewing the summary and flipping flashcards.
-- FastAPI backend with CORS configured for local frontend development.
+Built with a modular FastAPI backend, it handles the full AI pipeline from raw documents to grounded response generation:
 
-## Tech Stack
-
-- Backend: FastAPI, Pydantic, LangChain, Google Gemini.
-- Frontend: React, Vite, React Router, Axios, Tailwind CSS, shadcn/ui.
-- Tooling: Python environment managed through `uv`-generated requirements, npm for the frontend.
-
-## How It Works
-
-1. The user enters transcript text in the frontend.
-2. The frontend sends the text to the FastAPI endpoint `/api/v1/transcript/process-transcript`.
-3. The backend builds an LLM prompt and requests a structured response from Gemini.
-4. The API returns a summary plus a flashcard list.
-5. The frontend displays the result in the summary panel and interactive flashcards.
-
-## Project Structure
-
-```text
-backend/
-  main.py                # FastAPI app entry point
-  api/v1/                # API router and endpoints
-  core/config.py         # Environment configuration
-  schemas/transcript.py  # Response schema for summary + flashcards
-  services/ai_service.py # LangChain / Gemini summarization logic
-
-frontend/
-  src/
-    pages/Home.jsx       # Main page layout
-    components/          # Input, summary, and flashcard UI
-    lib/api.js           # Frontend API client
+```
+Documents → Ingestion → Semantic Chunks → Embeddings → ChromaDB → Hybrid Retrieval → Reranking → Citation-Grounded Answer
 ```
 
-## Getting Started
+---
+
+## � Demo
+
+### Indexing Documents
+
+```bash
+PYTHONPATH=. uv run python cli.py chat data/uploads/
+```
+
+<p align="center">
+  <img src="assets/upload_documents.png" alt="Upload Documents" width="750">
+</p>
+
+
+### Asking Questions
+
+<p align="center">
+  <img src="assets/chat_demo.png" alt="chat_demo" width="750">
+</p>
+
+---
+
+## �🏗️ Architecture
+
+```mermaid
+graph TD
+    A[📄 Document Input<br/>PDF / TXT / MD] --> B[cli.py / FastAPI<br/>User Interface]
+
+    B --> C[ingestion_service.py<br/>Text Extraction]
+    C --> D[chunking_service.py<br/>Semantic Chunking]
+
+    D --> E[embedding_service.py<br/>SentenceTransformers]
+    E --> F[(ChromaDB<br/>Persistent Vector Store)]
+
+    B --> G[User Question]
+    G --> H[retrieval_service.py<br/>Vector Search]
+    G --> I[bm25_service.py<br/>Keyword Search]
+
+    H --> J[Hybrid Retrieval]
+    I --> J
+
+    J --> K[reranker_service.py<br/>Cross-Encoder Reranking]
+    K --> L[generation_service.py<br/>Gemini + Grounded Prompt]
+
+    L --> M[Final Answer<br/>with Citations]
+
+    style A fill:#ff6b6b,color:#fff
+    style B fill:#4ecdc4,color:#fff
+    style F fill:#f9ca24,color:#333
+    style J fill:#6c5ce7,color:#fff
+    style M fill:#2ecc71,color:#fff
+```
+
+
+### Module Responsibilities
+
+| Module | Role |
+|--------|------|
+| `cli.py` | Typer + Rich command-line interface for indexing and querying documents |
+| `main.py` | FastAPI application entry point |
+| `ingestion_service.py` | Extracts and cleans text from uploaded documents |
+| `chunking_service.py` | Splits documents into overlapping semantic chunks |
+| `embedding_service.py` | Generates SentenceTransformers embeddings and stores them in ChromaDB |
+| `bm25_service.py` | Performs keyword-based `BM25` retrieval |
+| `retrieval_service.py` | Runs vector search and hybrid retrieval |
+| `reranker_service.py` | Reranks candidate chunks using a cross-encoder model |
+| `generation_service.py` | Generates citation-grounded answers using retrieved evidence |
+
+---
+
+## ✨ Features
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 1 | **Document Ingestion** | Supports PDF, TXT, and Markdown document processing |
+| 2 | **Semantic Chunking** | Splits long documents into overlapping retrieval-friendly chunks |
+| 3 | **Embedding Pipeline** | Uses SentenceTransformers to convert chunks into vector embeddings |
+| 4 | **Persistent Vector Store** | Stores embeddings in ChromaDB for reusable semantic search |
+| 5 | **Hybrid Retrieval** | Combines vector similarity search with BM25 keyword retrieval |
+| 6 | **Cross-Encoder Reranking** | Reranks retrieved chunks for better answer relevance |
+| 7 | **Citation-Grounded Answers** | Returns answers with source/chunk-level citations |
+| 8 | **Hallucination Guardrails** | Refuses unsupported questions when retrieved evidence is insufficient |
+| 9 | **Interactive CLI** | Typer + Rich powered local document QA experience |
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Python 3.13 or newer.
-- Node.js 18 or newer.
-- A Google Gemini API key.
+```bash
+uv sync
+```
 
-### 1. Backend Setup
+### Set Your API Key
 
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+# Windows (PowerShell)
+$env:GEMINI_API_KEY="your_key_here"
+
+# Windows (CMD)
+set GEMINI_API_KEY=your_key_here
+
+# macOS / Linux
+export GEMINI_API_KEY=your_key_here
 ```
 
-Create a `.env` file inside `backend/`:
+> Get your free API key from the [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
 
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-```
 
-Run the API:
+
+## 💻 Usage
+
+### Build and Query a Knowledge Base
 
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+PYTHONPATH=. uv run python cli.py chat data/uploads/
 ```
 
-FastAPI docs will be available at `http://localhost:8000/docs`.
+## 📂 Project Structure
 
-### 2. Frontend Setup
+```
+### 11. Project Structure
+
+```text
+
+│   ├── core/
+│   ├── services/
+│   │   ├── ingestion_service.py
+│   │   ├── chunking_service.py
+│   │   ├── embedding_service.py
+│   │   ├── bm25_service.py
+│   │   ├── retrieval_service.py
+│   │   ├── reranker_service.py
+│   │   └── generation_service.py│
+├── cli.py
+├── tests/
+├── data/
+└── pyproject.toml
+
+```
+---
+## 📁 Document Upload Directory
+
+Create the following directory inside the backend:
+
+```text
+backend/data/uploads/
+```
+
+Place all supported documents inside this folder before running the CLI.
+
+### Supported Formats
+
+- `.pdf`
+- `.txt`
+- `.md`
+
+### Example
+
+```text
+backend/
+└── data/
+    └── uploads/
+        ├── atomic-habits.pdf
+        ├── deep-learning.txt
+        └── notes.md
+```
+
+The CLI can index:
+- a single document
+- or the entire uploads directory
+
+### Index All Documents
 
 ```bash
-cd frontend
-npm install
-npm run dev
+PYTHONPATH=. uv run python cli.py data/uploads/
 ```
 
-By default, the frontend expects the backend to be running at `http://localhost:8000`.
+### Index a Single Document
 
-## API Reference
+```bash
+PYTHONPATH=. uv run python cli.py data/uploads/atomic-habits.pdf
+```
+---
 
-### `GET /`
+## 🧠 How the AI Pipeline Works
 
-Returns a simple health-style welcome message.
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant CLI as CLI / FastAPI
+    participant ING as ingestion_service
+    participant CH as chunking_service
+    participant EMB as embedding_service
+    participant DB as ChromaDB
+    participant RET as Hybrid Retrieval
+    participant RR as Reranker
+    participant GEN as Gemini LLM
 
-### `POST /api/v1/transcript/process-transcript`
+    U->>CLI: Upload PDF / Ask Question
+    CLI->>ING: Extract text from document
+    ING-->>CLI: Cleaned document text
+    CLI->>CH: Generate semantic chunks
+    CH-->>CLI: Overlapping retrieval chunks
+    CLI->>EMB: Generate embeddings
+    EMB->>DB: Store vectors + metadata
+    U->>CLI: Ask question
+    CLI->>EMB: Encode query embedding
+    CLI->>RET: Vector Search + BM25 Search
+    RET->>DB: Retrieve top candidate chunks
+    DB-->>RET: Semantic matches
+    RET-->>RR: Hybrid candidate chunks
+    RR->>RR: Cross-encoder reranking
+    RR-->>GEN: Top reranked chunks
+    GEN->>GEN: Generate grounded answer
+    GEN-->>U: Citation-backed response
+```
 
-Request body:
+---
+
+## 📊 Output Schema
+
+### RAG Chunk (JSONL)
 
 ```json
 {
-  "transcriptText": "Your transcript text here"
+  "chunk_id": "atomic-habits.pdf_chunk_42",
+  "source": "atomic-habits.pdf",
+  "page": 12,
+  "chunk_index": 42,
+  "text": "Habits are the compound interest of self-improvement..."
 }
 ```
 
-Response shape:
-
+### 🔍 Retrival Result Schema
 ```json
 {
-  "summary": "...",
-  "flashcards": [
-    {
-      "question": "...",
-      "answer": "..."
-    }
-  ]
+  "source": "atomic-habits.pdf",
+  "page": 12,
+  "chunk_index": 42,
+  "hybrid_score": 1.25,
+  "rerank_score": 8.91,
+  "text": "Habits are the compound interest of self-improvement..."
 }
 ```
 
-## Notes
+---
 
-- The current frontend UI includes tabs for YouTube URL, pasted text, and file upload, but the active backend workflow currently processes pasted transcript text.
-- If you change the backend host or port, update the Axios base URL in `frontend/src/lib/api.js`.
+## 🛡️ Hallucination Prevention
 
-## Future Improvements
+The assistant is instructed to answer only from retrieved context. If the retrieved chunks do not provide enough evidence, it refuses to answer instead of generating unsupported claims.
 
-- Support file uploads end to end.
-- Add export funtionality to save generated flashcards.
+Example:
+
+```
+ I don't have enough evidence to answer that.
+```
+---
+
+## 📋 Requirements
+
+| Package | Purpose |
+|---------|---------|
+| `fastapi` | REST API framework |
+| `langchain` | Prompt orchestration |
+| `langchain-google-genai` | Gemini API integration |
+| `chromadb` | Persistent vector database |
+| `sentence-transformers` | Embedding generation |
+| `rank-bm25` | Keyword-based retrieval |
+| `pypdf` | PDF text extraction |
+| `typer` | CLI framework |
+| `rich` | CLI formatting and visualization |
+| `uvicorn` | FastAPI ASGI server |
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---

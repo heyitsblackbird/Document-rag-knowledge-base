@@ -21,6 +21,7 @@ __pycache__/
 # Env
 .env
 
+
 # OS / Editor
 .vscode/*
 !.vscode/extensions.json
@@ -31,7 +32,11 @@ __pycache__/
 *.njsproj
 *.sln
 *.sw?
+.python-version
 
 # Vector DB
 backend/data/*
 !backend/data/.gitkeep
+
+#
+frontend/
