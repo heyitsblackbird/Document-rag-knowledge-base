@@ -9,7 +9,8 @@ from app.services.chunking_service import chunk__document
 from app.services.embedding_service import store_embeddings
 from app.services.retrieval_service import retrieve_relevant_chunks
 from app.services.generation_service import generate_answer
-
+from app.services.reranker_service import rerank_chunks
+    
 app = typer.Typer(help="Personal Learning Assistant CLI")
 console = Console()
 
@@ -48,7 +49,8 @@ async def user_chat():
 
         with console.status("[bold cyan]Generating answer...[/bold cyan]"):
             chunks = retrieve_relevant_chunks(question, top_k=3)
-            result = await generate_answer(question, chunks)
+            reranked_chunks = rerank_chunks(question, chunks, top_k=3)
+            result = await generate_answer(question, reranked_chunks)
         
         console.print(
             Panel(result["answer"], title="[bold green]Answer[/bold green]", border_style="green")
