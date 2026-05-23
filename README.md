@@ -32,7 +32,7 @@ Documents → Ingestion → Semantic Chunks → Embeddings → ChromaDB → Hybr
 ### Indexing Documents
 
 ```bash
-PYTHONPATH=. uv run python cli.py chat data/uploads/
+uv run python cli.py chat data/uploads/
 ```
 
 <p align="center">
@@ -48,11 +48,11 @@ PYTHONPATH=. uv run python cli.py chat data/uploads/
 
 ---
 
-## �🏗️ Architecture
+## 🏗️ Architecture
 
 ```mermaid
 graph TD
-    A[📄 Document Input<br/>PDF / TXT / MD] --> B[cli.py / FastAPI<br/>User Interface]
+    A[📄 Document Input<br/>PDF / TXT / MD] --> B[cli.py]
 
     B --> C[ingestion_service.py<br/>Text Extraction]
     C --> D[chunking_service.py<br/>Semantic Chunking]
@@ -85,7 +85,6 @@ graph TD
 | Module | Role |
 |--------|------|
 | `cli.py` | Typer + Rich command-line interface for indexing and querying documents |
-| `main.py` | FastAPI application entry point |
 | `ingestion_service.py` | Extracts and cleans text from uploaded documents |
 | `chunking_service.py` | Splits documents into overlapping semantic chunks |
 | `embedding_service.py` | Generates SentenceTransformers embeddings and stores them in ChromaDB |
@@ -141,7 +140,7 @@ export GEMINI_API_KEY=your_key_here
 ### Build and Query a Knowledge Base
 
 ```bash
-PYTHONPATH=. uv run python cli.py chat data/uploads/
+uv run python cli.py data/uploads/
 ```
 
 ## 📂 Project Structure
@@ -172,7 +171,7 @@ PYTHONPATH=. uv run python cli.py chat data/uploads/
 Create the following directory inside the backend:
 
 ```text
-backend/data/uploads/
+data/uploads/
 ```
 
 Place all supported documents inside this folder before running the CLI.
@@ -186,12 +185,11 @@ Place all supported documents inside this folder before running the CLI.
 ### Example
 
 ```text
-backend/
-└── data/
-    └── uploads/
-        ├── atomic-habits.pdf
-        ├── deep-learning.txt
-        └── notes.md
+data/
+  └── uploads/
+      ├── atomic-habits.pdf
+      ├── deep-learning.txt
+      └── notes.md
 ```
 
 The CLI can index:
@@ -201,13 +199,13 @@ The CLI can index:
 ### Index All Documents
 
 ```bash
-PYTHONPATH=. uv run python cli.py data/uploads/
+uv run python cli.py data/uploads/
 ```
 
 ### Index a Single Document
 
 ```bash
-PYTHONPATH=. uv run python cli.py data/uploads/atomic-habits.pdf
+uv run python cli.py data/uploads/atomic-habits.pdf
 ```
 ---
 
@@ -289,7 +287,6 @@ Example:
 
 | Package | Purpose |
 |---------|---------|
-| `fastapi` | REST API framework |
 | `langchain` | Prompt orchestration |
 | `langchain-google-genai` | Gemini API integration |
 | `chromadb` | Persistent vector database |
