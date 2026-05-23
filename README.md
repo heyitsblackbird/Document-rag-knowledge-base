@@ -32,7 +32,7 @@ Documents → Ingestion → Semantic Chunks → Embeddings → ChromaDB → Hybr
 ### Indexing Documents
 
 ```bash
-uv run python cli.py chat data/uploads/
+uv run python cli.py data/uploads/
 ```
 
 <p align="center">
@@ -146,24 +146,22 @@ uv run python cli.py data/uploads/
 ## 📂 Project Structure
 
 ```
-### 11. Project Structure
-
-```text
-
-│   ├── core/
-│   ├── services/
-│   │   ├── ingestion_service.py
-│   │   ├── chunking_service.py
-│   │   ├── embedding_service.py
-│   │   ├── bm25_service.py
-│   │   ├── retrieval_service.py
-│   │   ├── reranker_service.py
-│   │   └── generation_service.py│
+├── core/
+│   └── config.py
+├── services/
+│   ├── ingestion_service.py
+│   ├── chunking_service.py
+│   ├── embedding_service.py
+│   ├── bm25_service.py
+│   ├── retrieval_service.py
+│   ├── reranker_service.py
+│   └── generation_service.py
 ├── cli.py
 ├── tests/
 ├── data/
+│   ├── chromaDB/
+│   └── uploads/
 └── pyproject.toml
-
 ```
 ---
 ## 📁 Document Upload Directory
