@@ -166,6 +166,14 @@ curl -X POST http://127.0.0.1:8000/query \
 
 Interactive docs are available at `/docs` once the server is running.
 
+### Docker
+
+```bash
+docker compose up --build
+```
+
+This builds the image, starts the API on `http://localhost:8000`, and mounts `data/chromaDB/` and `data/uploads/` as volumes so indexed documents persist across container restarts. Requires a `GEMINI_API_KEY` in `.env` (see [Set Your API Key](#set-your-api-key) above).
+
 ## 📂 Project Structure
 
 ```
