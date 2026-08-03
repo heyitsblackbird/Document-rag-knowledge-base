@@ -6,8 +6,15 @@ from rank_bm25 import BM25Okapi
 CHROMA_PATH = "data/chromaDB"
 COLLECTION_NAME = "documents"
 
-_client = chromadb.PersistentClient(path=CHROMA_PATH)
-_collection = _client.get_or_create_collection(name=COLLECTION_NAME)
+_collection = None
+
+
+def _get_collection():
+    global _collection
+    if _collection is None:
+        client = chromadb.PersistentClient(path=CHROMA_PATH)
+        _collection = client.get_or_create_collection(name=COLLECTION_NAME)
+    return _collection
 
 
 def tokenize(text: str) -> list[str]:
@@ -15,7 +22,7 @@ def tokenize(text: str) -> list[str]:
 
 
 def get_all_chunks() -> list[dict]:
-    results = _collection.get(
+    results = _get_collection().get(
         include=["documents", "metadatas"]
     )
 

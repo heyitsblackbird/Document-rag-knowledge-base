@@ -3,15 +3,19 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from core.config import GEMINI_API_KEY
 
+_model = None
 
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY is not set.")
-
-model = ChatGoogleGenerativeAI(
-    api_key=SecretStr(GEMINI_API_KEY),
-    model="gemini-3-flash-preview",
-    temperature=0,
-)
+def _get_model() -> ChatGoogleGenerativeAI:
+    global _model
+    if _model is None:
+        if not GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY is not set.")
+        _model = ChatGoogleGenerativeAI(
+            api_key=SecretStr(GEMINI_API_KEY),
+            model="gemini-3-flash-preview",
+            temperature=0,
+        )
+    return _model
 
 
 def build_context(chunks: list[dict]) -> str:
@@ -20,10 +24,12 @@ def build_context(chunks: list[dict]) -> str:
     for i, chunk in enumerate(chunks, start=1):
         source = chunk.get("source", "unknown")
         chunk_index = chunk.get("chunk_index", "unknown")
+        page = chunk.get("page")
         text = chunk.get("text", "")
 
+        page_label = f", Page: {page}" if page not in (None, -1) else ""
         context_parts.append(
-            f"[Source {i}] File: {source}, Chunk: {chunk_index}\n{text}"
+            f"[Source {i}] File: {source}, Chunk: {chunk_index}{page_label}\n{text}"
         )
 
     return "\n\n".join(context_parts)
@@ -77,7 +83,7 @@ Question:
         )
     ])
 
-    chain = prompt | model
+    chain = prompt | _get_model()
 
     response = await chain.ainvoke({
         "context": context,
@@ -89,6 +95,7 @@ Question:
             "source_id": f"Source {i}",
             "source": chunk.get("source"),
             "chunk_index": chunk.get("chunk_index"),
+            "page": chunk.get("page") if chunk.get("page") not in (None, -1) else None,
             "text": chunk.get("text"),
         }
         for i, chunk in enumerate(chunks, start=1)

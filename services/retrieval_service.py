@@ -8,15 +8,28 @@ from services.bm25_retrieval_service import bm25_search
 
 CHROMA_PATH = 'data/chromaDB'
 COLLECTION_NAME = 'documents'
-_model = SentenceTransformer('all-MiniLM-L6-v2')
-_client = chromadb.PersistentClient(path=CHROMA_PATH)
-_collection = _client.get_or_create_collection(name=COLLECTION_NAME)
+
+_model = None
+_collection = None
+
+def _get_model() -> SentenceTransformer:
+    global _model
+    if _model is None:
+        _model = SentenceTransformer('all-MiniLM-L6-v2')
+    return _model
+
+def _get_collection():
+    global _collection
+    if _collection is None:
+        client = chromadb.PersistentClient(path=CHROMA_PATH)
+        _collection = client.get_or_create_collection(name=COLLECTION_NAME)
+    return _collection
 
 def generate_query_embedding(query:str) -> list:
     '''
     Generate embedding for the user query.
     '''
-    return _model.encode(query).tolist()
+    return _get_model().encode(query).tolist()
 
 def retrieve_relevant_chunks(question:str, top_k:int = 5) -> list[dict]:
     '''
@@ -24,8 +37,8 @@ def retrieve_relevant_chunks(question:str, top_k:int = 5) -> list[dict]:
     '''
 
     query_embedding = generate_query_embedding(question)
-    
-    results = _collection.query(
+
+    results = _get_collection().query(
         query_embeddings=[query_embedding],
         n_results=top_k,
         include=['documents', 'metadatas', 'distances']
@@ -49,6 +62,7 @@ def retrieve_relevant_chunks(question:str, top_k:int = 5) -> list[dict]:
             'text': documents[i],
             'source': metadata.get('source', 'unknown'),
             'chunk_index': metadata.get('chunk_index'),
+            'page': metadata.get('page'),
             'distance': distance,
         })
 
@@ -73,11 +87,12 @@ def hybrid_retrieval(question: str, top_k: int = 5, vector_k: int = 5, bm25_k: i
             'text': chunk['text'],
             'source': chunk['source'],
             'chunk_index': chunk['chunk_index'],
+            'page': chunk.get('page'),
             'vector_rank': rank,
             'bm25_rank': None,
             'hybrid_score': 1/ (rank),
         }
-    
+
     # BM25 results are keyed by source and chunk index
     for rank, chunk in enumerate(bm25_results, start=1):
         key = (chunk['source'], chunk['chunk_index'])
@@ -89,6 +104,7 @@ def hybrid_retrieval(question: str, top_k: int = 5, vector_k: int = 5, bm25_k: i
                 'text': chunk['text'],
                 'source': chunk['source'],
                 'chunk_index': chunk['chunk_index'],
+                'page': chunk.get('page'),
                 'vector_rank': None,
                 'bm25_rank': rank,
                 'hybrid_score': 1/ (rank),

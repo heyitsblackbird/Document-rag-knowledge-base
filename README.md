@@ -85,10 +85,11 @@ graph TD
 | Module | Role |
 |--------|------|
 | `cli.py` | Typer + Rich command-line interface for indexing and querying documents |
-| `ingestion_service.py` | Extracts and cleans text from uploaded documents |
-| `chunking_service.py` | Splits documents into overlapping semantic chunks |
+| `api.py` | FastAPI service exposing `/documents` (indexing) and `/query` (Q&A) endpoints |
+| `ingestion_service.py` | Extracts and cleans text from uploaded documents, page by page |
+| `chunking_service.py` | Splits each page into overlapping retrieval-friendly chunks |
 | `embedding_service.py` | Generates SentenceTransformers embeddings and stores them in ChromaDB |
-| `bm25_service.py` | Performs keyword-based `BM25` retrieval |
+| `bm25_retrieval_service.py` | Performs keyword-based `BM25` retrieval |
 | `retrieval_service.py` | Runs vector search and hybrid retrieval |
 | `reranker_service.py` | Reranks candidate chunks using a cross-encoder model |
 | `generation_service.py` | Generates citation-grounded answers using retrieved evidence |
@@ -100,7 +101,7 @@ graph TD
 | # | Feature | Description |
 |---|---------|-------------|
 | 1 | **Document Ingestion** | Supports PDF, TXT, and Markdown document processing |
-| 2 | **Semantic Chunking** | Splits long documents into overlapping retrieval-friendly chunks |
+| 2 | **Page-Aware Chunking** | Splits documents into overlapping retrieval-friendly chunks, preserving page numbers |
 | 3 | **Embedding Pipeline** | Uses SentenceTransformers to convert chunks into vector embeddings |
 | 4 | **Persistent Vector Store** | Stores embeddings in ChromaDB for reusable semantic search |
 | 5 | **Hybrid Retrieval** | Combines vector similarity search with BM25 keyword retrieval |
@@ -137,11 +138,33 @@ export GEMINI_API_KEY=your_key_here
 
 ## 💻 Usage
 
-### Build and Query a Knowledge Base
+### CLI
 
 ```bash
 uv run python cli.py data/uploads/
 ```
+
+### API
+
+```bash
+uv run uvicorn api:app --reload
+```
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Liveness check |
+| `POST /documents` | Upload and index a document (multipart file upload) |
+| `POST /query` | Ask a question against the indexed knowledge base |
+
+```bash
+curl -X POST http://127.0.0.1:8000/documents -F "file=@data/uploads/atomic-habits.pdf"
+
+curl -X POST http://127.0.0.1:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "How do habits compound over time?", "top_k": 3}'
+```
+
+Interactive docs are available at `/docs` once the server is running.
 
 ## 📂 Project Structure
 
@@ -152,10 +175,11 @@ uv run python cli.py data/uploads/
 │   ├── ingestion_service.py
 │   ├── chunking_service.py
 │   ├── embedding_service.py
-│   ├── bm25_service.py
+│   ├── bm25_retrieval_service.py
 │   ├── retrieval_service.py
 │   ├── reranker_service.py
 │   └── generation_service.py
+├── api.py
 ├── cli.py
 ├── tests/
 ├── data/
@@ -256,7 +280,7 @@ sequenceDiagram
 }
 ```
 
-### 🔍 Retrival Result Schema
+### 🔍 Retrieval Result Schema
 ```json
 {
   "source": "atomic-habits.pdf",

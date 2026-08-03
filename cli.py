@@ -5,9 +5,9 @@ from rich.table import Table
 from pathlib import Path
 
 from services.ingestion_service import ingest_document
-from services.chunking_service import chunk__document
+from services.chunking_service import chunk_document
 from services.embedding_service import store_embeddings
-from services.retrieval_service import retrieve_relevant_chunks
+from services.retrieval_service import hybrid_retrieval
 from services.generation_service import generate_answer
 from services.reranker_service import rerank_chunks
     
@@ -34,7 +34,7 @@ def chat(path_file:str):
 
     for file in _files_to_process:
         doc = ingest_document(str(file))
-        chunks = chunk__document(doc['text'], doc['source'])
+        chunks = chunk_document(doc['pages'], doc['source'])
         store_count = store_embeddings(chunks)
         _total_chunks += store_count
     console.print(f"[green]Indexed {_total_chunks} chunks from {path_file} successfully![/green]")
@@ -48,7 +48,7 @@ async def user_chat():
             break
 
         with console.status("[bold cyan]Generating answer...[/bold cyan]"):
-            chunks = retrieve_relevant_chunks(question, top_k=3)
+            chunks = hybrid_retrieval(question, top_k=10)
             reranked_chunks = rerank_chunks(question, chunks, top_k=3)
             result = await generate_answer(question, reranked_chunks)
         
@@ -59,12 +59,14 @@ async def user_chat():
         table = Table(title="Citations", show_header=True, header_style="bold yellow")
         table.add_column("Source Id")
         table.add_column("Document Source")
+        table.add_column("Page")
         table.add_column("Chunk Index")
 
         for citation in result["citations"]:
             table.add_row(
                 str(citation["source_id"]),
                 citation["source"],
+                str(citation["page"]) if citation["page"] is not None else "-",
                 str(citation["chunk_index"])
             )
         console.print(table)

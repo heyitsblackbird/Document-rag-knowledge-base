@@ -28,72 +28,74 @@ def _cleaned_data(text: str) -> str:
     return text.strip()
 
 
-def _extract_pdf_metadata(file_path: str) -> str:
+def _extract_pdf_pages(file_path: str) -> list[dict]:
     '''
-    Extract metadata from a PDF document.
+    Extract per-page text from a PDF document, preserving page numbers.
 
     Args:
         file_path (str): Path to the PDF document.
     Returns:
-        str: Extracted metadata as a string.
+        list[dict]: One entry per non-empty page: {"page": int, "text": str}.
     '''
 
     reader = PdfReader(file_path)
-    pages_text = []
+    pages = []
 
     for page_number, page in enumerate(reader.pages):
         try:
             text = page.extract_text()
-            if text.strip():
-                pages_text.append(f"\n\n--- Page {page_number + 1} ---\n{text}")
+            cleaned = _cleaned_data(text)
+            if cleaned:
+                pages.append({"page": page_number + 1, "text": cleaned})
         except Exception as e:
             print(f"Error extracting text from page {page_number}: {e}")
 
-    return _cleaned_data('\n'.join(pages_text))
+    return pages
 
 
-def _extract_text_metadata(file_path: str) -> str:
+def _extract_text_pages(file_path: str) -> list[dict]:
     '''
-    Extract metadata from a text-based document (e.g., .docx, .txt).
+    Extract text from a text-based document (e.g., .docx, .txt) as a single page.
 
     Args:
         file_path (str): Path to the text-based document.
     Returns:
-        str: Extracted metadata as a string.
+        list[dict]: A single-entry list: [{"page": None, "text": str}].
     '''
 
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             text = f.read()
-            return _cleaned_data(text)
+            cleaned = _cleaned_data(text)
+            return [{"page": None, "text": cleaned}] if cleaned else []
     except Exception as e:
         print(f"Error reading file {file_path}: {e}")
-        return "" 
+        return []
 
 def ingest_document(file_path: str) -> dict:
     '''
-    Main function to ingest documents and extract metadata.
+    Main function to ingest documents and extract per-page text.
 
     Args:
         file_path (str): Path to the document to be ingested.
     Returns:
-        dict: A dictionary containing the extracted metadata.
+        dict: {"source": str, "file-type": str, "pages": list[dict]}.
     '''
 
     path = Path(file_path)
 
     if not path.is_file():
         raise FileNotFoundError(f"File not found: {file_path}")
-    
+
     if path.suffix.lower() == '.pdf':
-        cleaned_metadata = _extract_pdf_metadata(file_path)
+        pages = _extract_pdf_pages(file_path)
     elif path.suffix.lower() in ['.docx', '.doc', '.txt']:
-        cleaned_metadata = _extract_text_metadata(file_path)
+        pages = _extract_text_pages(file_path)
     else:
         raise ValueError(f"Unsupported file type: {path.suffix}")
-    
+
     return {
         'source': path.name,
         "file-type": path.suffix.lower(),
-        'text': cleaned_metadata
+        'pages': pages
     }
