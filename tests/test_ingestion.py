@@ -1,4 +1,5 @@
 import pytest
+from docx import Document as DocxDocument
 
 from services import ingestion_service
 from services.ingestion_service import ingest_document, _cleaned_data
@@ -34,6 +35,37 @@ def test_ingest_document_txt_is_a_single_untitled_page(tmp_path):
     assert doc["source"] == "notes.txt"
     assert doc["file-type"] == ".txt"
     assert doc["pages"] == [{"page": None, "text": "Habits compound over time."}]
+
+
+def test_ingest_document_legacy_doc_is_rejected(tmp_path):
+    doc_file = tmp_path / "notes.doc"
+    doc_file.write_bytes(b"legacy binary word junk")
+
+    with pytest.raises(ValueError):
+        ingest_document(str(doc_file))
+
+
+def test_ingest_document_docx_extracts_paragraph_text(tmp_path):
+    docx_file = tmp_path / "notes.docx"
+    document = DocxDocument()
+    document.add_paragraph("Habits compound over time.")
+    document.add_paragraph("Small changes add up.")
+    document.save(str(docx_file))
+
+    doc = ingest_document(str(docx_file))
+
+    assert doc["source"] == "notes.docx"
+    assert doc["file-type"] == ".docx"
+    assert doc["pages"] == [{"page": None, "text": "Habits compound over time. Small changes add up."}]
+
+
+def test_ingest_document_docx_with_no_text_returns_no_pages(tmp_path):
+    docx_file = tmp_path / "blank.docx"
+    DocxDocument().save(str(docx_file))
+
+    doc = ingest_document(str(docx_file))
+
+    assert doc["pages"] == []
 
 
 class _FakePage:

@@ -4,6 +4,7 @@ Resposible for ingesting data and provide cleaned metadata for the rest of the a
 
 from pathlib import Path
 from pypdf import PdfReader
+from docx import Document as DocxDocument
 
 def _cleaned_data(text: str) -> str:
     '''
@@ -55,10 +56,10 @@ def _extract_pdf_pages(file_path: str) -> list[dict]:
 
 def _extract_text_pages(file_path: str) -> list[dict]:
     '''
-    Extract text from a text-based document (e.g., .docx, .txt) as a single page.
+    Extract text from a plain-text document (.txt) as a single page.
 
     Args:
-        file_path (str): Path to the text-based document.
+        file_path (str): Path to the text document.
     Returns:
         list[dict]: A single-entry list: [{"page": None, "text": str}].
     '''
@@ -71,6 +72,25 @@ def _extract_text_pages(file_path: str) -> list[dict]:
     except Exception as e:
         print(f"Error reading file {file_path}: {e}")
         return []
+
+
+def _extract_docx_pages(file_path: str) -> list[dict]:
+    '''
+    Extract text from a .docx document as a single page.
+
+    Word doesn't persist page boundaries in the file itself (pages are computed
+    at render time), so unlike PDFs there's no real page number to attach here.
+
+    Args:
+        file_path (str): Path to the .docx document.
+    Returns:
+        list[dict]: A single-entry list: [{"page": None, "text": str}].
+    '''
+
+    document = DocxDocument(file_path)
+    text = '\n'.join(paragraph.text for paragraph in document.paragraphs)
+    cleaned = _cleaned_data(text)
+    return [{"page": None, "text": cleaned}] if cleaned else []
 
 def ingest_document(file_path: str) -> dict:
     '''
@@ -89,7 +109,9 @@ def ingest_document(file_path: str) -> dict:
 
     if path.suffix.lower() == '.pdf':
         pages = _extract_pdf_pages(file_path)
-    elif path.suffix.lower() in ['.docx', '.doc', '.txt']:
+    elif path.suffix.lower() == '.docx':
+        pages = _extract_docx_pages(file_path)
+    elif path.suffix.lower() == '.txt':
         pages = _extract_text_pages(file_path)
     else:
         raise ValueError(f"Unsupported file type: {path.suffix}")
