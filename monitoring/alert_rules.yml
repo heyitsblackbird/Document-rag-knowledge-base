@@ -1,0 +1,46 @@
+groups:
+  - name: rag-api
+    rules:
+      - alert: HighQueryErrorRate
+        expr: |
+          sum(rate(rag_queries_total{outcome!="success"}[5m]))
+          /
+          sum(rate(rag_queries_total[5m]))
+          > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than 10% of /query requests are failing"
+
+      - alert: HighGenerationLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(rag_generation_latency_seconds_bucket[5m])) by (le))
+          > 8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 LLM generation latency above 8s for 5 minutes"
+
+      - alert: RetrievalQualityDrift
+        expr: |
+          histogram_quantile(0.50, sum(rate(rag_vector_distance_bucket[15m])) by (le))
+          > 0.8
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Median top-1 vector distance above 0.8 — retrieval may be returning irrelevant chunks"
+
+      - alert: LowCitationUsageRatio
+        expr: |
+          sum(rate(rag_chunks_cited_total[15m]))
+          /
+          sum(rate(rag_chunks_retrieved_total[15m]))
+          < 0.2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Fewer than 20% of retrieved chunks are being cited in answers — retrieval may be fetching irrelevant context"

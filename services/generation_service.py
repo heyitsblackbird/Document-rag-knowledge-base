@@ -1,7 +1,16 @@
+import re
+import time
+
 from pydantic import SecretStr
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from core.config import GEMINI_API_KEY
+from services.metrics_service import (
+    generation_latency_seconds,
+    generation_errors_total,
+    chunks_retrieved_total,
+    chunks_cited_total,
+)
 
 _model = None
 
@@ -55,6 +64,8 @@ async def generate_answer(question: str, chunks: list[dict]) -> dict:
             "citations": [],
         }
 
+    chunks_retrieved_total.inc(len(chunks))
+
     context = build_context(chunks)
 
     prompt = ChatPromptTemplate.from_messages([
@@ -83,12 +94,27 @@ Question:
         )
     ])
 
-    chain = prompt | _get_model()
+    try:
+        chain = prompt | _get_model()
+    except ValueError as e:
+        generation_errors_total.labels(reason="config_error").inc()
+        raise
 
-    response = await chain.ainvoke({
-        "context": context,
-        "question": question,
-    })
+    start = time.perf_counter()
+    try:
+        response = await chain.ainvoke({
+            "context": context,
+            "question": question,
+        })
+    except Exception:
+        generation_errors_total.labels(reason="llm_call_failed").inc()
+        raise
+    finally:
+        generation_latency_seconds.observe(time.perf_counter() - start)
+
+    answer_text = extract_response_content(response.content)
+    cited_sources = set(re.findall(r"\[Source (\d+)\]", answer_text))
+    chunks_cited_total.inc(len(cited_sources))
 
     citations = [
         {
@@ -102,6 +128,6 @@ Question:
     ]
 
     return {
-        "answer": extract_response_content(response.content),
+        "answer": answer_text,
         "citations": citations,
     }

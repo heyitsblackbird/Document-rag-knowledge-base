@@ -1,0 +1,131 @@
+{
+  "title": "RAG Engine Overview",
+  "uid": "rag-engine-overview",
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Query Rate by Outcome",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(rag_queries_total[1m])) by (outcome)",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP Error Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"4..|5..\"}[5m])) / sum(rate(http_requests_total[5m]))",
+          "legendFormat": "error rate"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Stage Latency (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(rag_bm25_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "bm25"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(rag_vector_search_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "vector search"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(rag_rerank_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "rerank"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(rag_generation_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "generation"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "End-to-End Request Latency (p50/p95/p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{handler=\"/query\"}[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{handler=\"/query\"}[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{handler=\"/query\"}[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Top-1 Vector Distance (retrieval quality drift)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(rag_vector_distance_bucket[5m])) by (le))",
+          "legendFormat": "p50 distance"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(rag_vector_distance_bucket[5m])) by (le))",
+          "legendFormat": "p90 distance"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Citation Usage Ratio (cited / retrieved chunks)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(rag_chunks_cited_total[5m])) / sum(rate(rag_chunks_retrieved_total[5m]))",
+          "legendFormat": "citation usage ratio"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Rerank Score Distribution",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(rag_rerank_score_bucket[5m])) by (le))",
+          "legendFormat": "p50 rerank score"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Generation Errors by Reason",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(rate(rag_generation_errors_total[5m])) by (reason)",
+          "legendFormat": "{{reason}}"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "version": 1
+}

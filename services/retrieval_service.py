@@ -2,9 +2,12 @@
 Retrieval service for fetching relevant chunks based on user queries.
 '''
 
+import time
+
 from sentence_transformers import SentenceTransformer
 import chromadb
 from services.bm25_retrieval_service import bm25_search
+from services.metrics_service import vector_search_latency_seconds, vector_distance
 
 CHROMA_PATH = 'data/chromaDB'
 COLLECTION_NAME = 'documents'
@@ -38,11 +41,13 @@ def retrieve_relevant_chunks(question:str, top_k:int = 5) -> list[dict]:
 
     query_embedding = generate_query_embedding(question)
 
+    start = time.perf_counter()
     results = _get_collection().query(
         query_embeddings=[query_embedding],
         n_results=top_k,
         include=['documents', 'metadatas', 'distances']
     )
+    vector_search_latency_seconds.observe(time.perf_counter() - start)
 
     retrieved_chunks = []
 
@@ -65,6 +70,9 @@ def retrieve_relevant_chunks(question:str, top_k:int = 5) -> list[dict]:
             'page': metadata.get('page'),
             'distance': distance,
         })
+
+    if retrieved_chunks:
+        vector_distance.observe(retrieved_chunks[0]['distance'])
 
     return retrieved_chunks
 

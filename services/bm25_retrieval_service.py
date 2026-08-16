@@ -1,6 +1,9 @@
 import re
+import time
+
 import chromadb
 from rank_bm25 import BM25Okapi
+from services.metrics_service import bm25_latency_seconds
 
 
 CHROMA_PATH = "data/chromaDB"
@@ -47,9 +50,12 @@ def get_all_chunks() -> list[dict]:
 
 
 def bm25_search(query: str, top_k: int = 5) -> list[dict]:
+    start = time.perf_counter()
+
     chunks = get_all_chunks()
 
     if not chunks:
+        bm25_latency_seconds.observe(time.perf_counter() - start)
         return []
 
     tokenized_corpus = [tokenize(chunk["text"]) for chunk in chunks]
@@ -57,6 +63,8 @@ def bm25_search(query: str, top_k: int = 5) -> list[dict]:
 
     tokenized_query = tokenize(query)
     scores = bm25.get_scores(tokenized_query)
+
+    bm25_latency_seconds.observe(time.perf_counter() - start)
 
     ranked = sorted(
         zip(chunks, scores),

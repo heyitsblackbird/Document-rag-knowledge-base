@@ -7,18 +7,23 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, UploadFile
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 
 from services.chunking_service import chunk_document
 from services.embedding_service import store_embeddings
 from services.generation_service import generate_answer
 from services.ingestion_service import ingest_document
+from services.metrics_service import queries_total
 from services.reranker_service import rerank_chunks
 from services.retrieval_service import hybrid_retrieval
 
 SUPPORTED_SUFFIXES = {".pdf", ".txt", ".docx"}
 
 app = FastAPI(title="RAG Learning Assistant API")
+
+# Exposes /metrics with HTTP-level request count, latency, and status codes.
+Instrumentator().instrument(app).expose(app)
 
 
 class IndexResponse(BaseModel):
@@ -77,6 +82,7 @@ async def upload_document(file: UploadFile):
 @app.post("/query", response_model=QueryResponse)
 async def query(request: QueryRequest):
     if not request.question.strip():
+        queries_total.labels(outcome="bad_request").inc()
         raise HTTPException(status_code=400, detail="Question must not be empty")
 
     candidates = hybrid_retrieval(request.question, top_k=10)
@@ -85,6 +91,8 @@ async def query(request: QueryRequest):
     try:
         result = await generate_answer(request.question, reranked)
     except ValueError as e:
+        queries_total.labels(outcome="generation_unavailable").inc()
         raise HTTPException(status_code=503, detail=str(e)) from e
 
+    queries_total.labels(outcome="success").inc()
     return QueryResponse(**result)
